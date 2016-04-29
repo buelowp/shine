@@ -1,28 +1,16 @@
 /*
- * Copyright 2013 Christian Muehlhaeuser
+ * DiscoveryUPnP.cpp
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation; version 2.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * Authors:
- *      Christian Muehlhaeuser <muesli@gmail.com>
+ *  Created on: Apr 29, 2016
+ *      Author: pete
  */
 
-#include "discovery.h"
+#include "DiscoveryUPnP.h"
 
 // Discovery timeout in seconds
 const unsigned int DISCOVERY_TIMEOUT = 3;
 
-Discovery::Discovery(QObject *parent) :
+DiscoveryUPnP::DiscoveryUPnP(QObject *parent) :
     QObject(parent),
     m_timeout(new QTimer(this))
 {
@@ -43,7 +31,7 @@ Discovery::Discovery(QObject *parent) :
     connect(m_timeout, SIGNAL(timeout()), this, SLOT(onTimeout()));
 }
 
-void Discovery::findBridges()
+void DiscoveryUPnP::findBridges()
 {
     m_timeout->stop();
     m_reportedBridges.clear();
@@ -62,7 +50,7 @@ void Discovery::findBridges()
     }
 }
 
-void Discovery::onTimeout()
+void DiscoveryUPnP::onTimeout()
 {
     if (m_reportedBridges.isEmpty()) {
         emit noBridgesFound();
@@ -71,7 +59,7 @@ void Discovery::onTimeout()
     }
 }
 
-void Discovery::onReadyRead()
+void DiscoveryUPnP::onReadyRead()
 {
     while (hasPendingDatagrams()) {
         QByteArray datagram;
