@@ -89,8 +89,8 @@ private slots:
 
 private:
     QString m_id;
-    QString m_name;
     Type m_type;
+    QString m_name;
     QDateTime m_dateTime;
     QString m_weekdays;
     bool m_enabled;

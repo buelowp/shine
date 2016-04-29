@@ -5,7 +5,7 @@ project(shine C CXX)
 
 set(CMAKE_AUTOMOC ON)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-permissive -pedantic -Wall -Wextra -fPIC")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-permissive -pedantic -Wall -Wextra -fPIC -std=c++11")
 
 include(FindPkgConfig)
 
@@ -27,7 +27,7 @@ else()
 endif()
 
 add_subdirectory(libhue)
-add_subdirectory(plugin)
-add_subdirectory(apps)
+#add_subdirectory(plugin)
+#add_subdirectory(apps)
 
 

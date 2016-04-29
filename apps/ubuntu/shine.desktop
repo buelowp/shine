@@ -1,8 +1,0 @@
-[Desktop Entry]
-Version=1.0
-Type=Application
-Terminal=false
-Name=shine
-Exec=./shine_ubuntu
-Icon=shine.svg
-X-Ubuntu-Touch=true

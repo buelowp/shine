@@ -26,15 +26,42 @@ set(libhue_SRCS
     rule.cpp
     rules.cpp
     rulesfiltermodel.cpp
-    action.cpp
-    condition.cpp
 )
 
-add_library(hue ${libhue_SRCS})
+set(libhue_HDRS
+    huebridgeconnection.h
+    hueobject.h
+    huemodel.h
+    discovery.h
+    configuration.h
+    groups.h
+    group.h
+    lights.h
+    lightsfiltermodel.h
+    light.h
+    lightinterface.h
+    scenes.h
+    scene.h
+    schedules.h
+    schedule.h
+    scenesfiltermodel.h
+    schedulesfiltermodel.h
+    sensor.h
+    sensors.h
+    sensorsfiltermodel.h
+    rule.h
+    rules.h
+    rulesfiltermodel.h
+)
+
+add_library(hue SHARED ${libhue_SRCS})
 
 if(HARMATTAN_BUILD)
     target_link_libraries(hue qjson)
 else()
     qt5_use_modules(hue Gui Network)
 endif()
+
+install(FILES ${libhue_HDRS} DESTINATION /usr/include/libhue)
+install(TARGETS hue DESTINATION lib)
 

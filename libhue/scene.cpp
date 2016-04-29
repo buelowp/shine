@@ -65,7 +65,10 @@ void Scene::setLights(const QList<int> lights)
 
 int Scene::light(int index) const
 {
-    if (index < 0 || index > m_lightIds.count() > 0) {
+	if (m_lightIds.count() <= 0)
+		return -1;
+
+    if (index < 0 || index > m_lightIds.count()) {
         return -1;
     }
     return m_lightIds.at(index);
