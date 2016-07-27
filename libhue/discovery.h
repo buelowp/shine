@@ -20,6 +20,7 @@
 #ifndef DISCOVERY_H
 #define DISCOVERY_H
 
+#include <QtCore>
 #include <QUdpSocket>
 #include <QHostAddress>
 
@@ -30,7 +31,7 @@ class Discovery: public QUdpSocket
     Q_OBJECT
 
 public:
-    Discovery(QObject *parent);
+    Discovery(QObject *parent = 0);
     void findBridges();
 
 signals:

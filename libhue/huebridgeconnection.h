@@ -66,6 +66,8 @@ public:
     };
 
     static HueBridgeConnection* instance();
+    static HueBridgeConnection* instance(QString);
+    static HueBridgeConnection* instance(QString, QString);
 
     QString apiKey() const;
     void setApiKey(const QString &apiKey);
@@ -88,7 +90,7 @@ signals:
     void discoveryErrorChanged();
     void bridgeFoundChanged();
     void connectedBridgeChanged();
-    void statusChanged();
+    void statusChanged(int);
 
     void createUserFailed(const QString &errorMessage);
 
@@ -100,9 +102,12 @@ private slots:
     void createUserFinished();
     void checkForUpdateFinished();
     void slotOpFinished();
+    void runDiscovery();
 
 private:
     HueBridgeConnection();
+    HueBridgeConnection(QString);
+    HueBridgeConnection(QString, QString);
     static HueBridgeConnection *s_instance;
 
     QNetworkAccessManager *m_nam;
@@ -112,6 +117,7 @@ private:
     QString m_apiKey;
     QString m_baseApiUrl;
     BridgeStatus m_bridgeStatus;
+	int m_statusChangeNum;
 
     int m_requestCounter;
     QHash<QNetworkReply*, int> m_requestIdMap;

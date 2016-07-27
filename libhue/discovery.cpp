@@ -23,7 +23,7 @@
 const unsigned int DISCOVERY_TIMEOUT = 3;
 
 Discovery::Discovery(QObject *parent) :
-    QObject(parent),
+    QUdpSocket(parent),
     m_timeout(new QTimer(this))
 {
     quint16 port = 1900;

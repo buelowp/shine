@@ -37,6 +37,22 @@
 
 HueBridgeConnection *HueBridgeConnection::s_instance = 0;
 
+HueBridgeConnection *HueBridgeConnection::instance(QString api, QString ip)
+{
+    if (!s_instance) {
+        s_instance = new HueBridgeConnection(api, ip);
+    }
+    return s_instance;
+}
+
+HueBridgeConnection *HueBridgeConnection::instance(QString api)
+{
+    if (!s_instance) {
+        s_instance = new HueBridgeConnection(api);
+    }
+    return s_instance;
+}
+
 HueBridgeConnection *HueBridgeConnection::instance()
 {
     if (!s_instance) {
@@ -52,8 +68,10 @@ QString HueBridgeConnection::apiKey() const
 
 void HueBridgeConnection::setApiKey(const QString &apiKey)
 {
+	qWarning() << __FUNCTION__ << ": Setting key to" << apiKey;
     if (m_apiKey != apiKey) {
         m_apiKey = apiKey;
+	qWarning() << __FUNCTION__ << ": Updated stored API key";
         emit apiKeyChanged();
     }
 }
@@ -78,6 +96,31 @@ HueBridgeConnection::BridgeStatus HueBridgeConnection::status() const
     return m_bridgeStatus;
 }
 
+HueBridgeConnection::HueBridgeConnection(QString apiKey):
+    m_nam(new QNetworkAccessManager(this)),
+    m_discoveryError(false),
+	m_apiKey(apiKey),
+    m_bridgeStatus(BridgeStatusSearching),
+    m_requestCounter(0)
+{
+    Discovery *discovery = new Discovery(this);
+    connect(discovery, SIGNAL(error()), this, SLOT(onDiscoveryError()));
+    connect(discovery, SIGNAL(foundBridge(QHostAddress)), this, SLOT(onFoundBridge(QHostAddress)));
+    connect(discovery, SIGNAL(noBridgesFound()), this, SLOT(onNoBridgesFound()));
+    discovery->findBridges();
+}
+
+HueBridgeConnection::HueBridgeConnection(QString apiKey, QString ip):
+    m_nam(new QNetworkAccessManager(this)),
+    m_discoveryError(false),
+	m_apiKey(apiKey),
+    m_bridgeStatus(BridgeStatusSearching),
+    m_requestCounter(0)
+{
+	m_statusChangeNum = 0;
+	onFoundBridge(QHostAddress(ip));
+}
+
 HueBridgeConnection::HueBridgeConnection():
     m_nam(new QNetworkAccessManager(this)),
     m_discoveryError(false),
@@ -91,9 +134,17 @@ HueBridgeConnection::HueBridgeConnection():
     discovery->findBridges();
 }
 
+void HueBridgeConnection::runDiscovery()
+{
+	if (m_bridgeStatus == BridgeStatus::BridgeStatusSearching) {
+		qWarning() << __FUNCTION__ << ": Running onFoundBridge()";
+		onFoundBridge(QHostAddress(QString("192.168.50.15")));
+	}
+}
+
 void HueBridgeConnection::onDiscoveryError()
 {
-    qDebug() << Q_FUNC_INFO << "Error discovering hue bridge!";
+    qWarning() << Q_FUNC_INFO << "Error discovering hue bridge!";
     m_discoveryError = true;
     emit discoveryErrorChanged();
 }
@@ -104,13 +155,17 @@ void HueBridgeConnection::onFoundBridge(QHostAddress bridge)
     disconnect(sender());
     m_bridge = bridge;
 
+	qWarning() << __FUNCTION__ << ": Found a bridge at" << bridge;
+	qWarning() << __FUNCTION__ << ": Using key" << m_apiKey;
     if (!m_apiKey.isEmpty()) {
         m_baseApiUrl = "http://" + m_bridge.toString() + "/api/" + m_apiKey + "/";
+	qWarning() << __FUNCTION__ << ": Sending" << m_baseApiUrl;
     }
 
     // Emitting this after we know if we can connect or not to avoid the ui triggering connect dialogs
     m_bridgeStatus = BridgeStatusConnecting;
-    emit statusChanged();
+	qWarning() << __FUNCTION__ << ": Bridge is connecting, number:" << m_statusChangeNum++;
+    emit statusChanged(m_statusChangeNum);
     emit bridgeFoundChanged();
 
     // Tell the bridge to check for firmware updates
@@ -136,7 +191,7 @@ void HueBridgeConnection::onFoundBridge(QHostAddress bridge)
 void HueBridgeConnection::onNoBridgesFound()
 {
     //FIXME: handle error case
-    qDebug() << Q_FUNC_INFO << "No hue bridges found!";
+    qWarning() << Q_FUNC_INFO << "No hue bridges found!";
 }
 
 void HueBridgeConnection::createUser(const QString &devicetype)
@@ -152,7 +207,7 @@ void HueBridgeConnection::createUser(const QString &devicetype)
     QByteArray data = serializer.serialize(params);
 #endif
 
-    qDebug() << "sending createUser to" << m_bridge.toString();
+    qWarning() << "sending createUser to" << m_bridge.toString();
     QNetworkRequest request;
     request.setUrl(QUrl("http://" + m_bridge.toString() + "/api"));
     QNetworkReply *reply = m_nam->post(request, data);
@@ -214,7 +269,7 @@ int HueBridgeConnection::post(const QString &path, const QVariantMap &params, QO
     QByteArray data = serializer.serialize(params);
 #endif
 
-    qDebug() << "posting" << jsonDoc.toJson()<< "\nto" << request.url() << "\n" << data;
+    qWarning() << "posting" << jsonDoc.toJson()<< "\nto" << request.url() << "\n" << data;
     QNetworkReply *reply = m_nam->post(request, data);
     connect(reply, SIGNAL(finished()), this, SLOT(slotOpFinished()));
     m_requestIdMap.insert(reply, m_requestCounter);
@@ -242,7 +297,7 @@ int HueBridgeConnection::put(const QString &path, const QVariantMap &params, QOb
     QJson::Serializer serializer;
     QByteArray data = serializer.serialize(params);
 #endif
-//    qDebug() << "putting" << url << data;
+//    qWarning() << "putting" << url << data;
 
     QNetworkReply *reply = m_nam->put(request, data);
     connect(reply, SIGNAL(finished()), this, SLOT(slotOpFinished()));
@@ -259,7 +314,7 @@ void HueBridgeConnection::createUserFinished()
     reply->deleteLater();
 
     QByteArray response = reply->readAll();
-    qDebug() << "create user finished" << response;
+    qWarning() << "create user finished" << response;
 
 #if QT_VERSION >= 0x050000
     QJsonParseError error;
@@ -297,6 +352,7 @@ void HueBridgeConnection::createUserFinished()
     emit apiKeyChanged();
 
     m_baseApiUrl = "http://" + m_bridge.toString() + "/api/" + m_apiKey + "/";
+	qWarning() << __FUNCTION__ << ": emitting connectedBridgeChanged";
     emit connectedBridgeChanged();
 }
 
@@ -306,15 +362,15 @@ void HueBridgeConnection::checkForUpdateFinished()
     reply->deleteLater();
 
     QByteArray response = reply->readAll();
-    qDebug() << "check for update finished" << response;
+    qWarning() << "check for update finished" << response;
 
 #if QT_VERSION >= 0x050000
     QJsonParseError error;
     QJsonDocument jsonDoc = QJsonDocument::fromJson(response, &error);
 
     if (error.error != QJsonParseError::NoError) {
-        qWarning() << "cannot parse response:" << error.errorString() << response;
-        emit statusChanged();
+        qWarning() << __FUNCTION__ << ": cannot parse response:" << error.errorString() << response;
+        emit statusChanged(m_statusChangeNum++);
         return;
     }
     QVariant rsp = jsonDoc.toVariant();
@@ -323,8 +379,8 @@ void HueBridgeConnection::checkForUpdateFinished()
     bool ok;
     QVariant rsp = parser.parse(response, &ok);
     if(!ok) {
-        qWarning() << "cannot parse response:" << response;
-        emit statusChanged();
+        qWarning() __FUNCTION__ << ": cannot parse response:" << response;
+        emit statusChanged(m_statusChangeNum++);
         return;
     }
 #endif
@@ -334,13 +390,15 @@ void HueBridgeConnection::checkForUpdateFinished()
             qWarning() << "User not authenticated to bridge";
             m_bridgeStatus = BridgeStatusAuthenticationFailure;
         } else {
-            qDebug() << "error communicating with bridge:" << jsonDoc.toJson();
+            qWarning() << "error communicating with bridge:" << jsonDoc.toJson();
         }
     } else {
         m_bridgeStatus = BridgeStatusConnected;
+	qWarning() << __FUNCTION__ << ": Emitting connectedBridgeChanged";
         emit connectedBridgeChanged();
     }
-    emit statusChanged();
+	qWarning() << __FUNCTION__ << ": Bridge is connected, emitting signal number" << m_statusChangeNum++;
+    emit statusChanged(m_statusChangeNum);
 }
 
 void HueBridgeConnection::slotOpFinished()
@@ -352,8 +410,8 @@ void HueBridgeConnection::slotOpFinished()
     int id = m_requestIdMap.take(reply);
     CallbackObject co = m_requestSenderMap.take(id);
 
-    qDebug() << "reply for" << co.sender() << co.slot();
-//    qDebug() << "response" << response;
+    qWarning() << "reply for" << co.sender() << co.slot();
+//    qWarning() << "response" << response;
 
     QVariant rsp;
 #if QT_VERSION >= 0x050000
