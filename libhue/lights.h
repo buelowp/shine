@@ -71,10 +71,13 @@ private slots:
 
 signals:
     void countChanged();
+    void lightStateUpdated(int, bool);
+    void updateLightsCount(int);
 
 private:
     Light* createLight(int id, const QString &name);
     void parseStateMap(Light *light, const QVariantMap &stateMap);
+    void printRoles(QModelIndex &index);
 
 private:
     QList<Light*> m_list;

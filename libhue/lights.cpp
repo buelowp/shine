@@ -78,6 +78,29 @@ QVariant Lights::data(const QModelIndex &index, int role) const
     return QVariant();
 }
 
+void Lights::printRoles(QModelIndex &index)
+{
+    Light *light = m_list.at(index.row());
+    if (light) {
+        qDebug() << __PRETTY_FUNCTION__ << ": light state";
+        qDebug() << "\tID:" << light->id();
+        qDebug() << "\tName:" << light->name();
+        qDebug() << "\tModelID:" << light->modelId();
+        qDebug() << "\tType:" << light->type();
+        qDebug() << "\tVersion:" << light->swversion();
+        qDebug() << "\tState:" << light->on();
+        qDebug() << "\tBrightness:" << light->bri();
+        qDebug() << "\tHue:" << light->hue();
+        qDebug() << "\tSaturation:" << light->sat();
+        qDebug() << "\tXY:" << light->xy();
+        qDebug() << "\tCT:" << light->ct();
+        qDebug() << "\tAlert:" << light->alert();
+        qDebug() << "\tEffect:" << light->effect();
+        qDebug() << "\tColorMode:" << light->colorMode();
+        qDebug() << "\tReachable:" << light->reachable();
+    }
+}
+
 QHash<int, QByteArray> Lights::roleNames() const
 {
     QHash<int, QByteArray> roles;
@@ -119,6 +142,7 @@ Light *Lights::findLight(int lightId) const
 
 void Lights::searchForNewLights()
 {
+	qWarning() << __PRETTY_FUNCTION__ << ": Searching for new lights";
     HueBridgeConnection::instance()->post("lights", QVariantMap(), this, "searchStarted");
 }
 
@@ -136,10 +160,10 @@ void Lights::refresh()
 
 void Lights::lightsReceived(int id, const QVariant &variant)
 {
-    qWarning() << "lightsResponse" << variant;
     Q_UNUSED(id)
     QVariantMap lights = variant.toMap();
 
+	qWarning() << __PRETTY_FUNCTION__ << ": got id" << id;
     // Find removed lights
     QList<Light*> removedLights;
     foreach (Light *light, m_list) {
@@ -163,12 +187,13 @@ void Lights::lightsReceived(int id, const QVariant &variant)
         if (light) {
             light->m_name = lights.value(lightId).toMap().value("name").toString();
             light->m_modelId = lights.value(lightId).toMap().value("modelid").toString();
+		qWarning() << __PRETTY_FUNCTION__ << ": name" << light->m_name << ", id" << light->m_modelId;
         } else {
             light = createLight(lightId.toInt(), lights.value(lightId).toMap().value("name").toString());
             light->m_modelId = lights.value(lightId).toMap().value("modelid").toString();
             newLights.append(light);
+		qWarning() << __PRETTY_FUNCTION__ << ": id" << light->m_modelId;
         }
-        qWarning() << "have modelid" << light->m_modelId;
         QVariantMap stateMap = lights.value(lightId).toMap().value("state").toMap();
         parseStateMap(light, stateMap);
     }
@@ -178,6 +203,7 @@ void Lights::lightsReceived(int id, const QVariant &variant)
         beginInsertRows(QModelIndex(), m_list.count(), m_list.count() + newLights.count() - 1);
         m_list.append(newLights);
         endInsertRows();
+        emit updateLightsCount(m_list.size());
     }
 
     m_busy = false;
@@ -224,15 +250,18 @@ void Lights::lightStateChanged()
             << RoleReachable;
 
     emit dataChanged(modelIndex, modelIndex, roles);
+//    qDebug() << __PRETTY_FUNCTION__ << ": state change for id " << light->id();
 #else
     emit dataChanged(modelIndex, modelIndex);
 #endif
+//    printRoles(modelIndex);
+    emit lightStateUpdated(light->id(), light->on());
 }
 
 void Lights::searchStarted(int id, const QVariant &response)
 {
     Q_UNUSED(id)
-    qWarning() << "search started" << response;
+    Q_UNUSED(response)
 }
 
 Light *Lights::createLight(int id, const QString &name)
